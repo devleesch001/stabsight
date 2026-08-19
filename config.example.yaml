@@ -1,0 +1,62 @@
+# stabsight - Configuration Example
+# Operational settings (can be overridden by CLI flags and INTERNET_MONITOR_* environment variables)
+log_level: "info"
+metrics_addr: ":9090"
+otlp_endpoint: "localhost:4317"
+
+# Network targets (strictly defined in this YAML file, never via flags or env vars)
+targets:
+  - name: "google-dns"
+    host: "8.8.8.8"
+    ip_version: "ipv4"
+    probes:
+      icmp:
+        interval: 1s
+        timeout: 1s
+        count: 1
+      dns:
+        interval: 5s
+        timeout: 2s
+        server: "8.8.8.8:53"
+        record_type: "A"
+
+  - name: "cloudflare-dns"
+    host: "1.1.1.1"
+    ip_version: "ipv4"
+    probes:
+      icmp:
+        interval: 1s
+        timeout: 1s
+        count: 1
+
+  - name: "example-http"
+    host: "example.com"
+    ip_version: "ipv4"
+    probes:
+      http:
+        interval: 10s
+        timeout: 5s
+        url: "https://example.com"
+        method: "GET"
+        expected_code: 200
+        tls_skip_verify: false
+      tcp:
+        interval: 5s
+        timeout: 2s
+        port: 443
+
+  - name: "route-diagnostics"
+    host: "1.1.1.1"
+    ip_version: "ipv4"
+    probes:
+      mtr:
+        interval: 60s
+        timeout: 5s
+        max_hops: 30
+
+  - name: "isp-bandwidth"
+    host: "speedtest"
+    probes:
+      speedtest:
+        interval: 30m
+        timeout: 60s

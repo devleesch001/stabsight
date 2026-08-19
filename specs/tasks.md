@@ -3,7 +3,7 @@
 ## Phase 1 : Fondations et Configuration
 - [x] **Task 1.1 :** Créer la structure des répertoires (ex: `cmd/`, `internal/config/`, `internal/scheduler/`, `internal/probes/`).
 - [x] **Task 1.2 :** Mettre en place la commande racine `cobra` (`stabsight run` a minima) avec les flags globaux (`--config`, `--log-level`, `--otlp-endpoint`, `--metrics-addr`).
-- [ ] **Task 1.3 :** Implémenter le chargement de `config.yaml` via `viper` avec validation des types (structures pour `targets`/sondes), en réservant cette partie du fichier au YAML uniquement (pas de binding flag/env dessus).
+- [x] **Task 1.3 :** Implémenter le chargement de `config.yaml` via `viper` avec validation des types (structures pour `targets`/sondes), en réservant cette partie du fichier au YAML uniquement (pas de binding flag/env dessus).
 - [ ] **Task 1.4 :** Configurer la surcharge par variables d'environnement sur les seuls réglages opérationnels (`viper.SetEnvPrefix("INTERNET_MONITOR")`, `viper.AutomaticEnv()`, `SetEnvKeyReplacer`) et écrire un test vérifiant l'ordre de priorité flag > env > fichier > défaut.
 - [ ] **Task 1.5 :** Mettre en place le logger structuré global (ex: `rs/zerolog`), initialisé à partir du niveau de log résolu par Viper (flag/env/YAML).
 
