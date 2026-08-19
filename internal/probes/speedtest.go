@@ -14,9 +14,9 @@ import (
 	"github.com/devleesch001/stabsight/internal/telemetry"
 )
 
-// SpeedtestRunner abstracts bandwidth measurements.
+// SpeedtestRunner abstracts bandwidth measurements in bits per second.
 type SpeedtestRunner interface {
-	Run(ctx context.Context, serverID string) (downloadBytesPerSec float64, uploadBytesPerSec float64, err error)
+	Run(ctx context.Context, serverID string) (downloadBitsPerSec float64, uploadBitsPerSec float64, err error)
 }
 
 // ExclusiveCoordinator abstracts scheduler exclusive execution to avoid bufferbloat (FR4).
@@ -138,14 +138,14 @@ func (p *SpeedtestProbe) executeSpeedtest(ctx context.Context) error {
 	testCtx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 
-	dlBytesSec, ulBytesSec, err := p.runner.Run(testCtx, p.serverID)
+	dlBitsSec, ulBitsSec, err := p.runner.Run(testCtx, p.serverID)
 	if err != nil {
 		return err
 	}
 
 	if p.metrics != nil {
-		p.metrics.RecordSpeedtest(ctx, dlBytesSec, p.targetName, "download")
-		p.metrics.RecordSpeedtest(ctx, ulBytesSec, p.targetName, "upload")
+		p.metrics.RecordSpeedtest(ctx, dlBitsSec, p.targetName, "download")
+		p.metrics.RecordSpeedtest(ctx, ulBitsSec, p.targetName, "upload")
 	}
 
 	return nil
@@ -154,7 +154,7 @@ func (p *SpeedtestProbe) executeSpeedtest(ctx context.Context) error {
 // RealSpeedtestRunner performs native Speedtest testing using speedtest-go.
 type RealSpeedtestRunner struct{}
 
-// Run locates closest server and executes download and upload bandwidth tests.
+// Run locates closest server and executes download and upload bandwidth tests in bits per second.
 func (r *RealSpeedtestRunner) Run(ctx context.Context, serverID string) (float64, float64, error) {
 	client := speedtest.New()
 
@@ -196,8 +196,9 @@ func (r *RealSpeedtestRunner) Run(ctx context.Context, serverID string) (float64
 		return 0, 0, fmt.Errorf("speedtest upload test failed: %w", err)
 	}
 
-	dlBytesSec := float64(targetServer.DLSpeed)
-	ulBytesSec := float64(targetServer.ULSpeed)
+	// Convert bytes/sec to bits/sec (1 Byte = 8 bits)
+	dlBitsSec := float64(targetServer.DLSpeed) * 8
+	ulBitsSec := float64(targetServer.ULSpeed) * 8
 
-	return dlBytesSec, ulBytesSec, nil
+	return dlBitsSec, ulBitsSec, nil
 }

@@ -64,7 +64,7 @@ Les métriques sont instrumentées une seule fois via `go.opentelemetry.io/otel/
 * `internet_monitor_rtt_seconds` (Float64Histogram, Native) : Latence globale.
 * `internet_monitor_jitter_seconds` (Float64Histogram, Native) : Variation de latence.
 * `internet_monitor_packet_loss_ratio` (Float64Gauge) : Pourcentage de perte.
-* `internet_monitor_speedtest_bytes_per_second` (Float64Gauge) : Bande passante.
+* `internet_monitor_speedtest_bits_per_second` (Float64Gauge, unit: `bit/s`) : Bande passante (bits/sec).
 
 **Labels standards associés à chaque métrique :**
 

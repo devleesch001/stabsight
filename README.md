@@ -31,7 +31,7 @@ Toutes les métriques respectent le préfixe conventionnel `internet_monitor_` :
 | `internet_monitor_rtt_seconds` | Float64Histogram (Native) | `s` | Latence aller-retour (RTT) | `target`, `probe`, `ip_version`, `status_code`, `record_type`, `hop`, `hop_ip` |
 | `internet_monitor_jitter_seconds` | Float64Histogram (Native) | `s` | Variation instantanée de latence \|RTT_n - RTT_(n-1)\| (sans lissage) | `target`, `probe`, `ip_version`, `status_code`, `record_type`, `port` |
 | `internet_monitor_packet_loss_ratio` | Float64Gauge | `1` | Ratio de perte de paquets (0.0 = 0%, 1.0 = 100%) | `target`, `probe`, `ip_version`, `status_code`, `record_type`, `port`, `hop`, `hop_ip` |
-| `internet_monitor_speedtest_bytes_per_second` | Float64Gauge | `By/s` | Débit mesuré en bande passante | `target`, `probe="speedtest"`, `direction` ("download", "upload") |
+| `internet_monitor_speedtest_bits_per_second` | Float64Gauge | `bit/s` | Débit mesuré en bande passante (bits/s) | `target`, `probe="speedtest"`, `direction` ("download", "upload") |
 
 ---
 

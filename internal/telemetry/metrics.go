@@ -8,12 +8,12 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// Metric names conforming strictly to design.md Section 4 conventions.
+// Metric names conforming strictly to OpenTelemetry and Prometheus naming conventions.
 const (
-	MetricRTTSeconds           = "internet_monitor_rtt_seconds"
-	MetricJitterSeconds        = "internet_monitor_jitter_seconds"
-	MetricPacketLossRatio      = "internet_monitor_packet_loss_ratio"
-	MetricSpeedtestBytesPerSec = "internet_monitor_speedtest_bytes_per_second"
+	MetricRTTSeconds      = "internet_monitor_rtt_seconds"
+	MetricJitterSeconds   = "internet_monitor_jitter_seconds"
+	MetricPacketLossRatio = "internet_monitor_packet_loss_ratio"
+	MetricSpeedtest       = "internet_monitor_speedtest"
 )
 
 // Standard label / attribute keys.
@@ -66,12 +66,12 @@ func NewMetrics(meter metric.Meter) (*Metrics, error) {
 	}
 
 	speedtest, err := meter.Float64Gauge(
-		MetricSpeedtestBytesPerSec,
-		metric.WithDescription("Speedtest measured network bandwidth in bytes per second"),
-		metric.WithUnit("By/s"),
+		MetricSpeedtest,
+		metric.WithDescription("Speedtest measured network bandwidth in bits per second"),
+		metric.WithUnit("bit/s"),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create %s gauge: %w", MetricSpeedtestBytesPerSec, err)
+		return nil, fmt.Errorf("failed to create %s gauge: %w", MetricSpeedtest, err)
 	}
 
 	return &Metrics{
@@ -124,8 +124,8 @@ func (m *Metrics) RecordPacketLoss(ctx context.Context, lossRatio float64, targe
 	m.packetLossGauge.Record(ctx, lossRatio, metric.WithAttributes(attrs...))
 }
 
-// RecordSpeedtest records bandwidth throughput in bytes/second.
-func (m *Metrics) RecordSpeedtest(ctx context.Context, bytesPerSec float64, target, direction string, extra ...attribute.KeyValue) {
+// RecordSpeedtest records bandwidth throughput in bits/second.
+func (m *Metrics) RecordSpeedtest(ctx context.Context, bitsPerSec float64, target, direction string, extra ...attribute.KeyValue) {
 	attrs := []attribute.KeyValue{
 		AttrTarget.String(target),
 		AttrProbe.String("speedtest"),
@@ -133,5 +133,5 @@ func (m *Metrics) RecordSpeedtest(ctx context.Context, bytesPerSec float64, targ
 	}
 	attrs = append(attrs, extra...)
 
-	m.speedtestGauge.Record(ctx, bytesPerSec, metric.WithAttributes(attrs...))
+	m.speedtestGauge.Record(ctx, bitsPerSec, metric.WithAttributes(attrs...))
 }
