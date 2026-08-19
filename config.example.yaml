@@ -1,8 +1,8 @@
 # stabsight - Configuration Example
 # Operational settings (can be overridden by CLI flags and INTERNET_MONITOR_* environment variables)
 log_level: "info"
-metrics_addr: ":9090"
-otlp_endpoint: "localhost:4317"
+metrics_addr: ":6967"
+otlp_endpoint: "http://localhost:4318"
 
 # Network targets (strictly defined in this YAML file, never via flags or env vars)
 targets:
