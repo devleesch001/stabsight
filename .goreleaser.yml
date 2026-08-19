@@ -1,11 +1,11 @@
 version: 2
 
-project_name: internet-monitor
+project_name: stabsight
 
 builds:
-  - id: internet-monitor
+  - id: stabsight
     main: ./cmd/main.go
-    binary: internet-monitor
+    binary: stabsight
     env:
       - CGO_ENABLED=0
     goos:

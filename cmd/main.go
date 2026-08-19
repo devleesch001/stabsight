@@ -1,8 +1,20 @@
-// Package main is the entrypoint for the internet-monitor application.
+// Package main is the entrypoint for the stabsight application.
 package main
 
-import "fmt"
+import (
+	"github.com/devleesch001/stabsight/internal/cli"
+)
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	cli.Execute(cli.BuildInfo{
+		Version: version,
+		Commit:  commit,
+		Date:    date,
+	})
 }
