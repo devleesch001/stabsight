@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 // Default operational values.
@@ -15,6 +17,7 @@ const (
 	DefaultLogLevel     = "info"
 	DefaultMetricsAddr  = ":9090"
 	DefaultOTLPEndpoint = "localhost:4317"
+	EnvPrefix           = "INTERNET_MONITOR"
 )
 
 // Config represents the complete application configuration.
@@ -102,29 +105,101 @@ func NewDefaultConfig() *Config {
 	}
 }
 
-// LoadFromFile loads and parses a YAML configuration file into Config.
-func LoadFromFile(filePath string) (*Config, error) {
+// NewViper creates and configures a Viper instance with defaults, env prefix and key replacers.
+func NewViper() *viper.Viper {
 	v := viper.New()
-	v.SetConfigFile(filePath)
-	v.SetConfigType("yaml")
+	v.SetEnvPrefix(EnvPrefix)
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
+	v.AutomaticEnv()
 
-	if err := v.ReadInConfig(); err != nil {
-		if os.IsNotExist(err) || strings.Contains(err.Error(), "no such file or directory") {
-			return nil, fmt.Errorf("config file not found: %w", err)
+	v.SetDefault("log_level", DefaultLogLevel)
+	v.SetDefault("metrics_addr", DefaultMetricsAddr)
+	v.SetDefault("otlp_endpoint", DefaultOTLPEndpoint)
+
+	return v
+}
+
+// BindFlags binds Cobra/pflag flags to Viper operational keys only.
+func BindFlags(v *viper.Viper, flags *pflag.FlagSet) error {
+	if flags == nil {
+		return nil
+	}
+
+	flagBindings := map[string]string{
+		"log_level":     "log-level",
+		"metrics_addr":  "metrics-addr",
+		"otlp_endpoint": "otlp-endpoint",
+	}
+
+	for viperKey, flagName := range flagBindings {
+		if flag := flags.Lookup(flagName); flag != nil {
+			if err := v.BindPFlag(viperKey, flag); err != nil {
+				return fmt.Errorf("failed to bind flag %q to %q: %w", flagName, viperKey, err)
+			}
 		}
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	return nil
+}
+
+// Load loads, merges, and validates configuration from Viper instance and optional config file.
+func Load(v *viper.Viper, configFile string, flags *pflag.FlagSet) (*Config, error) {
+	if v == nil {
+		v = NewViper()
+	}
+
+	if flags != nil {
+		if err := BindFlags(v, flags); err != nil {
+			return nil, err
+		}
 	}
 
 	cfg := NewDefaultConfig()
-	if err := v.Unmarshal(cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+
+	if configFile != "" {
+		v.SetConfigFile(configFile)
+		v.SetConfigType("yaml")
+		if err := v.ReadInConfig(); err != nil {
+			if os.IsNotExist(err) || strings.Contains(err.Error(), "no such file or directory") {
+				return nil, fmt.Errorf("config file not found: %w", err)
+			}
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+
+		// Strictly decode targets from YAML file content (FR1/FR7 boundary)
+		fileData, err := os.ReadFile(configFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file for targets: %w", err)
+		}
+
+		type yamlTargetsDoc struct {
+			Targets []Target `yaml:"targets"`
+		}
+		var doc yamlTargetsDoc
+		if err := yaml.Unmarshal(fileData, &doc); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal targets from YAML: %w", err)
+		}
+		if doc.Targets != nil {
+			cfg.Targets = doc.Targets
+		}
 	}
+
+	// Operational settings are resolved by Viper (flag > env > file > default)
+	cfg.LogLevel = v.GetString("log_level")
+	cfg.MetricsAddr = v.GetString("metrics_addr")
+	cfg.OTLPEndpoint = v.GetString("otlp_endpoint")
 
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	return cfg, nil
+}
+
+// LoadFromFile loads and parses a YAML configuration file into Config.
+func LoadFromFile(filePath string) (*Config, error) {
+	v := NewViper()
+	return Load(v, filePath, nil)
 }
 
 // Validate checks the configuration for semantic and type correctness.
