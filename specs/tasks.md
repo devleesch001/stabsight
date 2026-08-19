@@ -8,7 +8,7 @@
 - [x] **Task 1.5 :** Mettre en place le logger structuré global (ex: `rs/zerolog`), initialisé à partir du niveau de log résolu par Viper (flag/env/YAML).
 
 ## Phase 2 : Le Cœur de l'Orchestrateur (Scheduler)
-- [ ] **Task 2.1 :** Définir les types structurés pour les Channels (`Command`, `CmdPause`, `CmdResume`).
+- [x] **Task 2.1 :** Définir les types structurés pour les Channels (`Command`, `CmdPause`, `CmdResume`).
 - [ ] **Task 2.2 :** Créer l'interface abstraite `ProbeWorker` que toutes les futures sondes devront respecter.
 - [ ] **Task 2.3 :** Coder le moteur du `Scheduler` capable de recenser les workers.
 - [ ] **Task 2.4 :** Implémenter et tester unitairement la logique de broadcast du `Pause`, la collecte des `Ack`, et le broadcast du `Resume` avec des workers "mock".
