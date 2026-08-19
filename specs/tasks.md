@@ -20,7 +20,7 @@
 - [x] **Task 3.4 :** Créer un package utilitaire interne pour enregistrer facilement les métriques (enregistrement des Native Histograms).
 
 ## Phase 4 : Implémentation des Sondes "Légères"
-- [ ] **Task 4.1 :** Implémenter la sonde **ICMP** (utilisation de `golang.org/x/net/icmp` avec gestion correcte des privilèges `CAP_NET_RAW` ou UDP non-privilégié).
+- [x] **Task 4.1 :** Implémenter la sonde **ICMP** (utilisation de `golang.org/x/net/icmp` avec gestion correcte des privilèges `CAP_NET_RAW` ou UDP non-privilégié).
 - [ ] **Task 4.2 :** Implémenter la sonde **DNS** (mesure du temps de résolution).
 - [ ] **Task 4.3 :** Implémenter la sonde **HTTP/TCP** (mesure TTFB, TLS handshake).
 - [ ] **Task 4.4 :** Intégrer les calculs de Jitter spécifiques à ces sondes et injecter les résultats dans le provider OTLP.
