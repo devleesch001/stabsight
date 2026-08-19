@@ -31,6 +31,6 @@
 - [x] **Task 5.3 :** Créer la logique d'analyse locale corrélant les données MTR et ICMP pour émettre les logs structurés de diagnostic.
 
 ## Phase 6 : Finalisation et Déploiement
-- [ ] **Task 6.1 :** Rédiger le `Dockerfile` optimisé multi-stage.
+- [x] **Task 6.1 :** Rédiger le `Dockerfile` optimisé multi-stage.
 - [ ] **Task 6.2 :** Rédiger le `README.md` avec un exemple de configuration et d'intégration (ex: configuration Grafana Alloy pour ingestion).
 - [ ] **Task 6.3 :** Tests d'intégration réseau finaux.

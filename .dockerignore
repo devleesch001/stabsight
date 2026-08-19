@@ -1,0 +1,9 @@
+dist/
+bin/
+.git/
+.github/
+.idea/
+.vscode/
+*.test
+*.out
+*.log
