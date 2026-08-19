@@ -6,6 +6,7 @@ require (
 	github.com/miekg/dns v1.1.73
 	github.com/prometheus/client_golang v1.24.1
 	github.com/rs/zerolog v1.35.1
+	github.com/showwin/speedtest-go v1.7.11
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
