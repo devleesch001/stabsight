@@ -11,7 +11,7 @@
 - [x] **Task 2.1 :** Définir les types structurés pour les Channels (`Command`, `CmdPause`, `CmdResume`).
 - [x] **Task 2.2 :** Créer l'interface abstraite `ProbeWorker` que toutes les futures sondes devront respecter.
 - [x] **Task 2.3 :** Coder le moteur du `Scheduler` capable de recenser les workers.
-- [ ] **Task 2.4 :** Implémenter et tester unitairement la logique de broadcast du `Pause`, la collecte des `Ack`, et le broadcast du `Resume` avec des workers "mock".
+- [x] **Task 2.4 :** Implémenter et tester unitairement la logique de broadcast du `Pause`, la collecte des `Ack`, et le broadcast du `Resume` avec des workers "mock".
 
 ## Phase 3 : Instrumentation OpenTelemetry
 - [ ] **Task 3.1 :** Configurer le provider OTLP global au démarrage de l'application.
