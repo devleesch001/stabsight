@@ -50,3 +50,8 @@ func Init(level string) zerolog.Logger {
 	zerolog.SetGlobalLevel(logger.GetLevel())
 	return logger
 }
+
+// Get returns the global zerolog.Logger.
+func Get() zerolog.Logger {
+	return log.Logger
+}

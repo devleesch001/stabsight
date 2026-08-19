@@ -2,9 +2,11 @@ package cli_test
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/devleesch001/stabsight/internal/cli"
 )
@@ -75,12 +77,11 @@ func TestRunCmdExecution(t *testing.T) {
 
 	cmd := cli.NewRootCmd(cli.BuildInfo{Version: "dev"})
 
-	var buf bytes.Buffer
-	cmd.SetOut(&buf)
-	cmd.SetErr(&buf)
-	cmd.SetArgs([]string{"run", "--config", cfgPath, "--log-level", "debug", "--metrics-addr", ":9100", "--otlp-endpoint", "collector:4317"})
+	cmd.SetArgs([]string{"run", "--config", cfgPath, "--metrics-addr", "127.0.0.1:0", "--otlp-endpoint", "localhost:4317"})
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
 
-	if err := cmd.Execute(); err != nil {
+	if err := cmd.ExecuteContext(ctx); err != nil {
 		t.Fatalf("unexpected error executing run cmd: %v", err)
 	}
 }
