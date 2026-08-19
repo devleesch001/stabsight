@@ -2,6 +2,8 @@ package cli_test
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/devleesch001/stabsight/internal/cli"
@@ -65,12 +67,18 @@ func TestVersionCmdExecution(t *testing.T) {
 }
 
 func TestRunCmdExecution(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfgPath := filepath.Join(tmpDir, "test-config.yaml")
+	if err := os.WriteFile(cfgPath, []byte("targets:\n  - name: t1\n    host: 1.1.1.1\n"), 0600); err != nil {
+		t.Fatalf("failed to create temp config: %v", err)
+	}
+
 	cmd := cli.NewRootCmd(cli.BuildInfo{Version: "dev"})
 
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
 	cmd.SetErr(&buf)
-	cmd.SetArgs([]string{"run", "--config", "custom.yaml", "--log-level", "debug", "--metrics-addr", ":9100", "--otlp-endpoint", "collector:4317"})
+	cmd.SetArgs([]string{"run", "--config", cfgPath, "--log-level", "debug", "--metrics-addr", ":9100", "--otlp-endpoint", "collector:4317"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error executing run cmd: %v", err)

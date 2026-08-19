@@ -5,7 +5,7 @@
 - [x] **Task 1.2 :** Mettre en place la commande racine `cobra` (`stabsight run` a minima) avec les flags globaux (`--config`, `--log-level`, `--otlp-endpoint`, `--metrics-addr`).
 - [x] **Task 1.3 :** Implémenter le chargement de `config.yaml` via `viper` avec validation des types (structures pour `targets`/sondes), en réservant cette partie du fichier au YAML uniquement (pas de binding flag/env dessus).
 - [x] **Task 1.4 :** Configurer la surcharge par variables d'environnement sur les seuls réglages opérationnels (`viper.SetEnvPrefix("INTERNET_MONITOR")`, `viper.AutomaticEnv()`, `SetEnvKeyReplacer`) et écrire un test vérifiant l'ordre de priorité flag > env > fichier > défaut.
-- [ ] **Task 1.5 :** Mettre en place le logger structuré global (ex: `rs/zerolog`), initialisé à partir du niveau de log résolu par Viper (flag/env/YAML).
+- [x] **Task 1.5 :** Mettre en place le logger structuré global (ex: `rs/zerolog`), initialisé à partir du niveau de log résolu par Viper (flag/env/YAML).
 
 ## Phase 2 : Le Cœur de l'Orchestrateur (Scheduler)
 - [ ] **Task 2.1 :** Définir les types structurés pour les Channels (`Command`, `CmdPause`, `CmdResume`).
