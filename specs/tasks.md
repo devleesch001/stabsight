@@ -27,7 +27,7 @@
 
 ## Phase 5 : Sondes "Lourdes" et Diagnostics
 - [x] **Task 5.1 :** Implémenter la sonde **Speedtest** (utilisation d'un client natif Go ou wrap léger de CLI externe si trop complexe, avec exécution via le mode "Exclusif" du Scheduler).
-- [ ] **Task 5.2 :** Implémenter la sonde **MTR** (exécution séquentielle de requêtes avec TTL incrémental).
+- [x] **Task 5.2 :** Implémenter la sonde **MTR** (exécution séquentielle de requêtes avec TTL incrémental).
 - [ ] **Task 5.3 :** Créer la logique d'analyse locale corrélant les données MTR et ICMP pour émettre les logs structurés de diagnostic.
 
 ## Phase 6 : Finalisation et Déploiement
