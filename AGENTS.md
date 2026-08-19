@@ -1,4 +1,4 @@
-# AGENTS.md — Internet-Monitor
+# AGENTS.md — stabsight
 
 Agent d'observabilité réseau en Go. Ce fichier ne décrit **pas** le projet — il décrit comment toi, agent de code, dois te comporter dessus. La spec fonctionnelle et technique vit ailleurs, lis-la avant de coder.
 

@@ -1,1 +1,23 @@
-.idea
+# Binaries
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+stabsight
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+coverage.out
+coverage.html

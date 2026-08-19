@@ -1,4 +1,4 @@
-# Design Architecture - Internet-Monitor
+# Design Architecture - stabsight
 
 ## 1. Architecture Globale
 L'application suit un modèle de découplage strict entre le moteur de mesure (Monitor Core), l'orchestrateur (Scheduler) et le pipeline d'export (OTLP).
@@ -27,7 +27,7 @@ graph TD
 
 L'entrée de l'application est gérée par `spf13/cobra` (structure de commandes) couplé à `spf13/viper` (chargement et fusion de la configuration).
 
-* **`cobra`** définit la commande racine (et les sous-commandes futures, ex: `internet-monitor run`, `internet-monitor version`) ainsi que les flags globaux (`--config`, `--log-level`, `--otlp-endpoint`, `--metrics-addr`).
+* **`cobra`** définit la commande racine (et les sous-commandes futures, ex: `stabsight run`, `stabsight version`) ainsi que les flags globaux (`--config`, `--log-level`, `--otlp-endpoint`, `--metrics-addr`).
 * **`viper`** charge le fichier `config.yaml` (cibles + sondes, cf. FR1) et fusionne par-dessus les réglages **opérationnels** uniquement, dans l'ordre de priorité standard Viper : flag CLI > variable d'environnement > fichier YAML > valeur par défaut.
 * **Variables d'environnement :** liaison automatique via `viper.SetEnvPrefix("INTERNET_MONITOR")` + `viper.AutomaticEnv()`, avec remplacement `.`/`-` par `_` (`viper.SetEnvKeyReplacer`). Exemples : `INTERNET_MONITOR_LOG_LEVEL`, `INTERNET_MONITOR_OTLP_ENDPOINT`, `INTERNET_MONITOR_METRICS_ADDR`.
 * **Frontière stricte avec FR1 :** la liste des `targets` et des sondes associées (adresses, types de sondes, intervalles) reste exclusivement définie dans `config.yaml` et chargée en tant que structure imbriquée par Viper — elle n'est **jamais** exposée via un flag Cobra individuel ni une variable d'environnement. Seuls les réglages opérationnels globaux de l'agent (niveau de log, endpoints d'export, adresse d'écoute `/metrics`, chemin du fichier de config) sont éligibles à la surcharge par flag/env.

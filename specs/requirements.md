@@ -1,4 +1,4 @@
-# Requirements - Internet-Monitor
+# Requirements - stabsight
 
 ## 1. Vision du Produit
 Un agent d'observabilité réseau autonome et moderne, conçu pour diagnostiquer finement les dégradations de connectivité. Il dépasse le simple "ping" en corrélant plusieurs types de mesures (latence de bout en bout, sauts de routage, tests de bande passante) et s'intègre nativement dans les pipelines de télémétrie actuels (OpenTelemetry).
