@@ -9,6 +9,7 @@ import (
 	"github.com/showwin/speedtest-go/speedtest"
 
 	"github.com/devleesch001/stabsight/internal/config"
+	"github.com/devleesch001/stabsight/internal/logging"
 	"github.com/devleesch001/stabsight/internal/scheduler"
 	"github.com/devleesch001/stabsight/internal/telemetry"
 )
@@ -111,14 +112,24 @@ func (p *SpeedtestProbe) Start(ctx context.Context, cmdChan <-chan scheduler.Com
 
 // triggerMeasurement orchestrates exclusive execution if coordinator is available.
 func (p *SpeedtestProbe) triggerMeasurement(ctx context.Context) {
+	logger := logging.Get()
+	logger.Info().Str("probe", p.name).Msg("Starting exclusive Speedtest bandwidth measurement (pausing background probes)")
+
 	runFn := func(execCtx context.Context) error {
 		return p.executeSpeedtest(execCtx)
 	}
 
+	var err error
 	if p.coordinator != nil {
-		_ = p.coordinator.ExecuteExclusive(ctx, runFn)
+		err = p.coordinator.ExecuteExclusive(ctx, runFn)
 	} else {
-		_ = runFn(ctx)
+		err = runFn(ctx)
+	}
+
+	if err != nil {
+		logger.Error().Err(err).Str("probe", p.name).Msg("Speedtest measurement failed")
+	} else {
+		logger.Info().Str("probe", p.name).Msg("Speedtest bandwidth measurement completed successfully")
 	}
 }
 
@@ -146,6 +157,9 @@ type RealSpeedtestRunner struct{}
 // Run locates closest server and executes download and upload bandwidth tests.
 func (r *RealSpeedtestRunner) Run(ctx context.Context, serverID string) (float64, float64, error) {
 	client := speedtest.New()
+
+	// Fetch user info for location-based closest server selection
+	_, _ = client.FetchUserInfo()
 
 	serverList, err := client.FetchServers()
 	if err != nil {

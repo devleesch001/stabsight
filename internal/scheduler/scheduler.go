@@ -113,14 +113,11 @@ func (s *Scheduler) Start(ctx context.Context) error {
 
 	s.mu.RLock()
 	for _, h := range s.workers {
-		// Exclusive workers (like Speedtest) are triggered separately via ExecuteExclusive
-		if !h.worker.IsExclusive() {
-			s.wg.Add(1)
-			go func(handle *workerHandle) {
-				defer s.wg.Done()
-				_ = handle.worker.Start(runCtx, handle.cmdChan, handle.ackChan)
-			}(h)
-		}
+		s.wg.Add(1)
+		go func(handle *workerHandle) {
+			defer s.wg.Done()
+			_ = handle.worker.Start(runCtx, handle.cmdChan, handle.ackChan)
+		}(h)
 	}
 	s.mu.RUnlock()
 
