@@ -16,7 +16,7 @@
 ## Phase 3 : Instrumentation OpenTelemetry
 - [x] **Task 3.1 :** Configurer le provider OTLP global au démarrage de l'application.
 - [x] **Task 3.2 :** Instancier l'exporter Prometheus pour exposer le endpoint `/metrics`.
-- [ ] **Task 3.3 :** Instancier l'exporter OTLP (gRPC/HTTP) basé sur les variables d'environnement (standard OTel).
+- [x] **Task 3.3 :** Instancier l'exporter OTLP (gRPC/HTTP) basé sur les variables d'environnement (standard OTel).
 - [ ] **Task 3.4 :** Créer un package utilitaire interne pour enregistrer facilement les métriques (enregistrement des Native Histograms).
 
 ## Phase 4 : Implémentation des Sondes "Légères"
