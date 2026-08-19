@@ -5,12 +5,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/http/httptrace"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -49,10 +47,7 @@ type HTTPProbe struct {
 	timeout       time.Duration
 	client        HTTPClient
 	metrics       *telemetry.Metrics
-
-	mu      sync.Mutex
-	lastRTT float64
-	hasRTT  bool
+	jitterCalc    *JitterCalculator
 }
 
 // NewHTTPProbe instantiates a new HTTPProbe worker.
@@ -99,6 +94,7 @@ func NewHTTPProbe(targetName, host string, cfg *config.HTTPProbeConfig, ipVersio
 		timeout:       timeout,
 		client:        client,
 		metrics:       metrics,
+		jitterCalc:    NewJitterCalculator(),
 	}
 }
 
@@ -184,16 +180,11 @@ func (p *HTTPProbe) executeCheck(ctx context.Context) {
 		attribute.String("status_code", strconv.Itoa(res.StatusCode)),
 	}
 
-	p.mu.Lock()
-	if p.hasRTT {
-		jitter := math.Abs(rttSeconds - p.lastRTT)
+	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "http", p.ipVersion, extraAttrs...)
 		}
 	}
-	p.lastRTT = rttSeconds
-	p.hasRTT = true
-	p.mu.Unlock()
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "http", p.ipVersion, extraAttrs...)

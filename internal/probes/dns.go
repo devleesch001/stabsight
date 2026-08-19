@@ -3,10 +3,8 @@ package probes
 import (
 	"context"
 	"fmt"
-	"math"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -34,10 +32,7 @@ type DNSProbe struct {
 	recordType string
 	resolver   DNSResolver
 	metrics    *telemetry.Metrics
-
-	mu      sync.Mutex
-	lastRTT float64
-	hasRTT  bool
+	jitterCalc *JitterCalculator
 }
 
 // NewDNSProbe instantiates a new DNSProbe worker.
@@ -77,6 +72,7 @@ func NewDNSProbe(targetName, host string, cfg *config.DNSProbeConfig, ipVersion 
 		recordType: recordType,
 		resolver:   resolver,
 		metrics:    metrics,
+		jitterCalc: NewJitterCalculator(),
 	}
 }
 
@@ -162,17 +158,12 @@ func (p *DNSProbe) executeCheck(ctx context.Context) {
 
 	rttSeconds := rtt.Seconds()
 
-	p.mu.Lock()
-	if p.hasRTT {
-		// FR5: Real-time Jitter calculation without smoothing
-		jitter := math.Abs(rttSeconds - p.lastRTT)
+	// FR5: Real-time Jitter calculation without smoothing
+	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "dns", p.ipVersion, extraAttrs...)
 		}
 	}
-	p.lastRTT = rttSeconds
-	p.hasRTT = true
-	p.mu.Unlock()
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "dns", p.ipVersion, extraAttrs...)

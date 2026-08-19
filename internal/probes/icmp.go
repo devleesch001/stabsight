@@ -3,12 +3,10 @@ package probes
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/rand"
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"golang.org/x/net/icmp"
@@ -36,10 +34,7 @@ type ICMPProbe struct {
 	count      int
 	pinger     Pinger
 	metrics    *telemetry.Metrics
-
-	mu      sync.Mutex
-	lastRTT float64
-	hasRTT  bool
+	jitterCalc *JitterCalculator
 }
 
 // NewICMPProbe instantiates a new ICMPProbe worker.
@@ -74,6 +69,7 @@ func NewICMPProbe(targetName, host string, cfg *config.ICMPProbeConfig, ipVersio
 		count:      count,
 		pinger:     pinger,
 		metrics:    metrics,
+		jitterCalc: NewJitterCalculator(),
 	}
 }
 
@@ -155,17 +151,12 @@ func (p *ICMPProbe) executeCheck(ctx context.Context) {
 
 	rttSeconds := rtt.Seconds()
 
-	p.mu.Lock()
-	if p.hasRTT {
-		// FR5: Real-time Jitter calculation = |RTT_n - RTT_(n-1)| without smoothing
-		jitter := math.Abs(rttSeconds - p.lastRTT)
+	// FR5: Real-time Jitter calculation = |RTT_n - RTT_(n-1)| without smoothing
+	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "icmp", p.ipVersion)
 		}
 	}
-	p.lastRTT = rttSeconds
-	p.hasRTT = true
-	p.mu.Unlock()
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "icmp", p.ipVersion)

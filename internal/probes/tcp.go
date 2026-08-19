@@ -3,10 +3,8 @@ package probes
 import (
 	"context"
 	"fmt"
-	"math"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -32,10 +30,7 @@ type TCPProbe struct {
 	timeout    time.Duration
 	dialer     TCPDialer
 	metrics    *telemetry.Metrics
-
-	mu      sync.Mutex
-	lastRTT float64
-	hasRTT  bool
+	jitterCalc *JitterCalculator
 }
 
 // NewTCPProbe instantiates a new TCPProbe worker.
@@ -70,6 +65,7 @@ func NewTCPProbe(targetName, host string, cfg *config.TCPProbeConfig, ipVersion 
 		timeout:    timeout,
 		dialer:     dialer,
 		metrics:    metrics,
+		jitterCalc: NewJitterCalculator(),
 	}
 }
 
@@ -162,16 +158,11 @@ func (p *TCPProbe) executeCheck(ctx context.Context) {
 
 	rttSeconds := rtt.Seconds()
 
-	p.mu.Lock()
-	if p.hasRTT {
-		jitter := math.Abs(rttSeconds - p.lastRTT)
+	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "tcp", p.ipVersion, extraAttrs...)
 		}
 	}
-	p.lastRTT = rttSeconds
-	p.hasRTT = true
-	p.mu.Unlock()
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "tcp", p.ipVersion, extraAttrs...)
