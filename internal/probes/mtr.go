@@ -265,6 +265,17 @@ func (t *RealMTRTracer) Trace(ctx context.Context, host string, maxHops int, tim
 	return result, nil
 }
 
+var warnRawSocketOnce sync.Once
+
+func logRawSocketWarning(err error) {
+	warnRawSocketOnce.Do(func() {
+		logger := logging.Get()
+		logger.Warn().
+			Err(err).
+			Msg("MTR probe running in unprivileged UDP mode without CAP_NET_RAW. Intermediate hops will time out (hop_ip=*). To capture intermediate hops, run 'sudo setcap cap_net_raw+ep <binary>' or add '--cap-add=NET_RAW' in Docker.")
+	})
+}
+
 // pingHop sends a single echo request with specified TTL and waits for TimeExceeded or EchoReply.
 func (t *RealMTRTracer) pingHop(
 	ctx context.Context,
@@ -285,6 +296,7 @@ func (t *RealMTRTracer) pingHop(
 		icmpType = ipv6.ICMPTypeEchoRequest
 		conn, err = icmp.ListenPacket("ip6:ipv6-icmp", "::")
 		if err != nil {
+			logRawSocketWarning(err)
 			conn, err = icmp.ListenPacket("udp6", "::")
 			if err != nil {
 				return nil, false, err
@@ -299,6 +311,7 @@ func (t *RealMTRTracer) pingHop(
 		icmpType = ipv4.ICMPTypeEcho
 		conn, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
 		if err != nil {
+			logRawSocketWarning(err)
 			conn, err = icmp.ListenPacket("udp4", "0.0.0.0")
 			if err != nil {
 				return nil, false, err

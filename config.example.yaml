@@ -2,9 +2,10 @@
 # Operational settings (can be overridden by CLI flags and INTERNET_MONITOR_* environment variables)
 log_level: "info"
 log_format: "json" # Log format: "json" (structured) or "common" (human-readable console)
-histogram_mode: "explicit" # "explicit" (for standard Prometheus buckets) or "exponential" (OTel native)
+histogram_mode: "exponential" # "explicit" (for standard Prometheus buckets) or "exponential" (OTel native)
 # Optional: custom bucket boundaries in seconds (default: 0.5ms to 10s)
 # histogram_buckets: [0.0005, 0.001, 0.0025, 0.005, 0.010, 0.025, 0.050, 0.100, 0.250, 0.500, 1.0, 2.5, 5.0, 10.0]
+
 metrics_addr: ":6967"
 otlp_endpoint: "http://localhost:4318"
 

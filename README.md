@@ -146,6 +146,9 @@ prometheus.scrape "stabsight" {
 # Compiler le binaire
 go build -o bin/stabsight ./cmd
 
+# (Recommandé) Accorder la capacité réseau pour capturer les sauts intermédiaires MTR sans être root
+sudo setcap cap_net_raw+ep ./bin/stabsight
+
 # Lancer la surveillance
 ./bin/stabsight run --config config.example.yaml --log-level debug
 
@@ -155,6 +158,8 @@ go build -o bin/stabsight ./cmd
 
 ### Exécution avec Docker
 
+Pour que la sonde MTR puisse capturer les sauts intermédiaires, ajoutez `--cap-add=NET_RAW` :
+
 ```bash
 # Construction de l'image
 docker build -t stabsight:latest .
@@ -162,9 +167,24 @@ docker build -t stabsight:latest .
 # Exécution du conteneur avec exposition du endpoint Prometheus
 docker run -d \
   --name stabsight \
+  --cap-add=NET_RAW \
   -p 9090:9090 \
   -v $(pwd)/config.example.yaml:/etc/stabsight/config.yaml:ro \
   stabsight:latest
+```
+
+#### Docker Compose
+
+```yaml
+services:
+  stabsight:
+    image: ghcr.io/devleesch001/stabsight:latest
+    cap_add:
+      - NET_RAW
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config.yaml:/etc/stabsight/config.yaml:ro
 ```
 
 ---
