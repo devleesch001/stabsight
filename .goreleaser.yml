@@ -2,6 +2,10 @@ version: 2
 
 project_name: stabsight
 
+before:
+  hooks:
+    - go mod tidy
+
 builds:
   - id: stabsight
     main: ./cmd/main.go
@@ -21,14 +25,27 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
 
+nfpms:
+  - file_name_template: "stabsight-{{ .Tag }}.{{ .Arch }}"
+    id: stabsight-pkg
+    package_name: stabsight
+    version_metadata: git
+    section: "net"
+    priority: "extra"
+    maintainer: "Alexis DEVLEESCHAUWER <alexis@devleeschauwer.fr>"
+    description: |
+      stabsight agent d'observabilité réseau
+      stabsight est un agent d'observabilité réseau autonome qui diagnostique
+      les dégradations de connectivité via des sondes ICMP, TCP, DNS, HTTP, MTR et
+      Speedtest, avec export natif OpenTelemetry (histogrammes natifs, pull /metrics
+      et push OTLP).
+    formats: [ deb, rpm, ipk, archlinux ]
+    license: "AGPL-3.0"
+    bindir: /usr/bin
+
 archives:
-  - formats:
-      - tar.gz
+  - formats: [ binary ]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        formats:
-          - zip
 
 checksum:
   name_template: "checksums.txt"
@@ -42,3 +59,23 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+  groups:
+    - title: 'Features'
+      regexp: "^feat"
+      order: 0
+    - title: 'Fixes'
+      regexp: "^fix"
+      order: 1
+    - title: 'Others'
+      order: 999
+
+gitea_urls:
+  api: https://git.omniumcorp.fr/api/v1
+  download: https://git.omniumcorp.fr
+  skip_tls_verify: false
+
+release:
+  header: |
+    {{ .Version }}
+    =============
+    {{ .Now.Format "2006-01-02" }}
