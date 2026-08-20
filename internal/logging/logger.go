@@ -3,6 +3,7 @@ package logging
 import (
 	"fmt"
 	"io"
+	stdlog "log"
 	"os"
 	"strings"
 	"time"
@@ -61,10 +62,15 @@ func New(level, format string, w io.Writer) zerolog.Logger {
 }
 
 // Init configures the global zerolog.Logger with the given level, format, and writes to os.Stdout.
+// It also redirects standard library logging (net/http etc.) to Zerolog.
 func Init(level, format string) zerolog.Logger {
 	logger := New(level, format, os.Stdout)
 	log.Logger = logger
 	zerolog.SetGlobalLevel(logger.GetLevel())
+
+	stdlog.SetFlags(0)
+	stdlog.SetOutput(logger)
+
 	return logger
 }
 

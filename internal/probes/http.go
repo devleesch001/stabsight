@@ -275,8 +275,11 @@ func (c *RealHTTPClient) Do(ctx context.Context, method, targetURL string, expec
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
+		if resp != nil && resp.Body != nil {
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1024*1024))
+			_ = resp.Body.Close()
+		}
+		transport.CloseIdleConnections()
 	}()
 
 	ttfb := time.Duration(0)

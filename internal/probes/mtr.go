@@ -173,6 +173,15 @@ func (p *MTRProbe) executeTrace(ctx context.Context) {
 	defer cancel()
 
 	logger := logging.Get()
+	logger.Debug().
+		Str("probe", p.name).
+		Str("target", p.targetName).
+		Str("host", p.host).
+		Int("max_hops", p.maxHops).
+		Dur("timeout_per_hop", p.timeout).
+		Msg("Starting MTR traceroute")
+
+	start := time.Now()
 	result, err := p.tracer.Trace(traceCtx, p.host, p.maxHops, p.timeout)
 	if err != nil || result == nil {
 		logger.Debug().
@@ -198,6 +207,7 @@ func (p *MTRProbe) executeTrace(ctx context.Context) {
 		Str("host", p.host).
 		Int("hops_count", len(result.Hops)).
 		Bool("reached_target", result.ReachedTarget).
+		Dur("duration", time.Since(start)).
 		Msg("MTR traceroute completed")
 
 	if p.metrics != nil {
@@ -236,6 +246,8 @@ func (t *RealMTRTracer) Trace(ctx context.Context, host string, maxHops int, tim
 		Hops:   make([]MTRHop, 0, maxHops),
 	}
 
+	logger := logging.Get()
+
 	for ttl := 1; ttl <= maxHops; ttl++ {
 		select {
 		case <-ctx.Done():
@@ -248,12 +260,24 @@ func (t *RealMTRTracer) Trace(ctx context.Context, host string, maxHops int, tim
 		cancel()
 
 		if hopErr != nil {
+			logger.Debug().
+				Str("host", host).
+				Int("hop", ttl).
+				Str("hop_ip", "*").
+				Msg("MTR hop timeout")
 			result.Hops = append(result.Hops, MTRHop{
 				Hop:     ttl,
 				IP:      "*",
 				Success: false,
 			})
 		} else {
+			logger.Debug().
+				Str("host", host).
+				Int("hop", ttl).
+				Str("hop_ip", hop.IP).
+				Dur("rtt", hop.RTT).
+				Bool("reached_target", reachedTarget).
+				Msg("MTR hop response")
 			result.Hops = append(result.Hops, *hop)
 			if reachedTarget {
 				result.ReachedTarget = true
