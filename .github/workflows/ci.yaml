@@ -38,7 +38,7 @@ jobs:
           install-mode: "goinstall"
 
       - name: Validate GoReleaser Build (Snapshot)
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"

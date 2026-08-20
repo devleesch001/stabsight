@@ -13,9 +13,9 @@ COPY . .
 # Compile static binary
 ARG TARGETOS
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build \
+RUN CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH:-amd64}" go build \
     -ldflags="-s -w -X github.com/devleesch001/stabsight/cmd.version=docker -X github.com/devleesch001/stabsight/cmd.commit=container" \
-    -o /out/stabsight ./cmd
+    -o /out/stabsight "./cmd"
 
 # Runtime stage
 FROM gcr.io/distroless/static-debian12:nonroot
