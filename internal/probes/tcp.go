@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/devleesch001/stabsight/internal/config"
+	"github.com/devleesch001/stabsight/internal/logging"
 	"github.com/devleesch001/stabsight/internal/scheduler"
 	"github.com/devleesch001/stabsight/internal/telemetry"
 )
@@ -143,6 +144,7 @@ func (p *TCPProbe) executeCheck(ctx context.Context) {
 	}
 
 	address := net.JoinHostPort(p.host, strconv.Itoa(p.port))
+	logger := logging.Get()
 	rtt, err := p.dialer.Dial(checkCtx, network, address, p.timeout)
 
 	extraAttrs := []attribute.KeyValue{
@@ -150,6 +152,15 @@ func (p *TCPProbe) executeCheck(ctx context.Context) {
 	}
 
 	if err != nil {
+		logger.Debug().
+			Err(err).
+			Str("probe", p.name).
+			Str("target", p.targetName).
+			Str("host", p.host).
+			Int("port", p.port).
+			Str("ip_version", p.ipVersion).
+			Msg("TCP connect failed")
+
 		if p.metrics != nil {
 			p.metrics.RecordPacketLoss(ctx, 1.0, p.targetName, "tcp", p.ipVersion, extraAttrs...)
 		}
@@ -157,12 +168,28 @@ func (p *TCPProbe) executeCheck(ctx context.Context) {
 	}
 
 	rttSeconds := rtt.Seconds()
-
+	jitterVal := 0.0
+	var hasJitter bool
 	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
+		jitterVal = jitter
+		hasJitter = true
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "tcp", p.ipVersion, extraAttrs...)
 		}
 	}
+
+	logEvent := logger.Debug().
+		Str("probe", p.name).
+		Str("target", p.targetName).
+		Str("host", p.host).
+		Int("port", p.port).
+		Str("ip_version", p.ipVersion).
+		Dur("rtt", rtt)
+
+	if hasJitter {
+		logEvent = logEvent.Float64("jitter_seconds", jitterVal)
+	}
+	logEvent.Msg("TCP connect success")
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "tcp", p.ipVersion, extraAttrs...)

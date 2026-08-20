@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/devleesch001/stabsight/internal/config"
+	"github.com/devleesch001/stabsight/internal/logging"
 	"github.com/devleesch001/stabsight/internal/scheduler"
 	"github.com/devleesch001/stabsight/internal/telemetry"
 )
@@ -144,12 +145,22 @@ func (p *DNSProbe) executeCheck(ctx context.Context) {
 	resolveCtx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 
+	logger := logging.Get()
 	rtt, err := p.resolver.Resolve(resolveCtx, p.host, p.recordType, p.server, p.timeout)
 	extraAttrs := []attribute.KeyValue{
 		attribute.String("record_type", p.recordType),
 	}
 
 	if err != nil {
+		logger.Debug().
+			Err(err).
+			Str("probe", p.name).
+			Str("target", p.targetName).
+			Str("host", p.host).
+			Str("record_type", p.recordType).
+			Str("server", p.server).
+			Msg("DNS query failed")
+
 		if p.metrics != nil {
 			p.metrics.RecordPacketLoss(ctx, 1.0, p.targetName, "dns", p.ipVersion, extraAttrs...)
 		}
@@ -157,13 +168,30 @@ func (p *DNSProbe) executeCheck(ctx context.Context) {
 	}
 
 	rttSeconds := rtt.Seconds()
+	jitterVal := 0.0
+	var hasJitter bool
 
 	// FR5: Real-time Jitter calculation without smoothing
 	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
+		jitterVal = jitter
+		hasJitter = true
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "dns", p.ipVersion, extraAttrs...)
 		}
 	}
+
+	logEvent := logger.Debug().
+		Str("probe", p.name).
+		Str("target", p.targetName).
+		Str("host", p.host).
+		Str("record_type", p.recordType).
+		Str("server", p.server).
+		Dur("rtt", rtt)
+
+	if hasJitter {
+		logEvent = logEvent.Float64("jitter_seconds", jitterVal)
+	}
+	logEvent.Msg("DNS query success")
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "dns", p.ipVersion, extraAttrs...)

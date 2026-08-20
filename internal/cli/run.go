@@ -31,10 +31,11 @@ func newRunCmd(flags *GlobalFlags) *cobra.Command {
 				return fmt.Errorf("configuration error: %w", err)
 			}
 
-			// Initialize global structured logger with resolved log level
-			logger := logging.Init(cfg.LogLevel)
+			// Initialize global structured logger with resolved log level and format
+			logger := logging.Init(cfg.LogLevel, cfg.LogFormat)
 			logger.Info().
 				Str("log_level", cfg.LogLevel).
+				Str("log_format", cfg.LogFormat).
 				Str("metrics_addr", cfg.MetricsAddr).
 				Str("otlp_endpoint", cfg.OTLPEndpoint).
 				Int("targets_count", len(cfg.Targets)).
@@ -82,7 +83,9 @@ func RunApp(ctx context.Context, cfg *config.Config) error {
 
 	// 3. OpenTelemetry Provider
 	telProvider, err := telemetry.NewProvider(telemetry.ProviderConfig{
-		ServiceName: "stabsight",
+		ServiceName:      "stabsight",
+		HistogramMode:    cfg.HistogramMode,
+		HistogramBuckets: cfg.HistogramBuckets,
 	}, readers...)
 	if err != nil {
 		return fmt.Errorf("failed to initialize telemetry provider: %w", err)

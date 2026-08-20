@@ -67,6 +67,47 @@ func TestConfigValidation_LogLevel(t *testing.T) {
 	}
 }
 
+func TestConfigValidation_LogFormat(t *testing.T) {
+	cfg := config.NewDefaultConfig()
+	cfg.LogFormat = "invalid_format"
+
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error for invalid log format, got nil")
+	}
+
+	validFormats := []string{"json", "common", "console", "JSON", "COMMON", ""}
+	for _, fmt := range validFormats {
+		cfg.LogFormat = fmt
+		if err := cfg.Validate(); err != nil {
+			t.Errorf("expected format %q to be valid, got: %v", fmt, err)
+		}
+	}
+}
+
+func TestConfigValidation_Histogram(t *testing.T) {
+	cfg := config.NewDefaultConfig()
+	cfg.HistogramMode = "invalid_mode"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error for invalid histogram_mode, got nil")
+	}
+
+	cfg.HistogramMode = "explicit"
+	cfg.HistogramBuckets = []float64{0.1, 0.05} // non monotonic
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error for non-monotonic buckets, got nil")
+	}
+
+	cfg.HistogramBuckets = []float64{-0.1, 0.5} // negative bucket
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected validation error for negative bucket, got nil")
+	}
+
+	cfg.HistogramBuckets = []float64{0.001, 0.005, 0.010, 0.050}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected valid configuration, got: %v", err)
+	}
+}
+
 func TestConfigValidation_RequiredFields(t *testing.T) {
 	cfg := config.NewDefaultConfig()
 	cfg.MetricsAddr = ""

@@ -148,6 +148,16 @@ func (p *SpeedtestProbe) executeSpeedtest(ctx context.Context) error {
 		p.metrics.RecordSpeedtest(ctx, ulBitsSec, p.targetName, "upload")
 	}
 
+	logger := logging.Get()
+	logger.Debug().
+		Str("probe", p.name).
+		Str("target", p.targetName).
+		Float64("download_bits_per_sec", dlBitsSec).
+		Float64("upload_bits_per_sec", ulBitsSec).
+		Float64("download_mbps", dlBitsSec/1_000_000).
+		Float64("upload_mbps", ulBitsSec/1_000_000).
+		Msg("Speedtest bandwidth measurement details")
+
 	return nil
 }
 

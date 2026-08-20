@@ -38,6 +38,29 @@ func TestNewProvider_Defaults(t *testing.T) {
 	}
 }
 
+func TestNewProvider_HistogramModes(t *testing.T) {
+	// Explicit with custom buckets
+	telExplicit, err := telemetry.NewProvider(telemetry.ProviderConfig{
+		HistogramMode:    "explicit",
+		HistogramBuckets: []float64{0.001, 0.010, 0.100, 1.0},
+	})
+	if err != nil {
+		t.Fatalf("failed to create explicit provider: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_ = telExplicit.Shutdown(ctx)
+
+	// Exponential mode
+	telExpo, err := telemetry.NewProvider(telemetry.ProviderConfig{
+		HistogramMode: "exponential",
+	})
+	if err != nil {
+		t.Fatalf("failed to create exponential provider: %v", err)
+	}
+	_ = telExpo.Shutdown(ctx)
+}
+
 func TestNewProvider_CustomAttributes(t *testing.T) {
 	tel, err := telemetry.NewProvider(telemetry.ProviderConfig{
 		ServiceName:    "custom-agent",

@@ -16,7 +16,7 @@ import (
 )
 
 func TestRunApp_FullLifecycle(t *testing.T) {
-	_ = logging.Init("debug")
+	_ = logging.Init("debug", "json")
 
 	// Local mock HTTP server
 	httpSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

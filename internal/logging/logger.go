@@ -27,8 +27,8 @@ func ParseLevel(level string) (zerolog.Level, error) {
 	}
 }
 
-// New creates a configured zerolog.Logger with the specified level and output writer.
-func New(level string, w io.Writer) zerolog.Logger {
+// New creates a configured zerolog.Logger with the specified level, format ("json" or "common"), and output writer.
+func New(level, format string, w io.Writer) zerolog.Logger {
 	lvl, err := ParseLevel(level)
 	if err != nil {
 		lvl = zerolog.InfoLevel
@@ -36,16 +36,33 @@ func New(level string, w io.Writer) zerolog.Logger {
 
 	zerolog.TimeFieldFormat = time.RFC3339
 
-	return zerolog.New(w).
+	var out = w
+	switch strings.ToLower(strings.TrimSpace(format)) {
+	case "common", "console":
+		out = zerolog.ConsoleWriter{
+			Out:        w,
+			TimeFormat: time.RFC3339,
+		}
+	case "json", "":
+		out = w
+	}
+
+	logger := zerolog.New(out).
 		Level(lvl).
 		With().
 		Timestamp().
 		Logger()
+
+	if err != nil {
+		logger.Warn().Err(err).Msgf("Invalid log level, defaulting to %s", lvl.String())
+	}
+
+	return logger
 }
 
-// Init configures the global zerolog.Logger with the given level and writes to os.Stdout.
-func Init(level string) zerolog.Logger {
-	logger := New(level, os.Stdout)
+// Init configures the global zerolog.Logger with the given level, format, and writes to os.Stdout.
+func Init(level, format string) zerolog.Logger {
+	logger := New(level, format, os.Stdout)
 	log.Logger = logger
 	zerolog.SetGlobalLevel(logger.GetLevel())
 	return logger

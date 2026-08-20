@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/devleesch001/stabsight/internal/config"
+	"github.com/devleesch001/stabsight/internal/logging"
 	"github.com/devleesch001/stabsight/internal/scheduler"
 	"github.com/devleesch001/stabsight/internal/telemetry"
 )
@@ -163,12 +164,26 @@ func (p *HTTPProbe) executeCheck(ctx context.Context) {
 	checkCtx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 
+	logger := logging.Get()
 	res, err := p.client.Do(checkCtx, p.method, p.url, p.expectedCode, p.tlsSkipVerify, p.timeout)
 	if err != nil || (res != nil && !res.Success) {
-		extraAttrs := []attribute.KeyValue{}
+		var extraAttrs []attribute.KeyValue
+		statusCode := 0
 		if res != nil && res.StatusCode > 0 {
+			statusCode = res.StatusCode
 			extraAttrs = append(extraAttrs, attribute.String("status_code", strconv.Itoa(res.StatusCode)))
 		}
+
+		logger.Debug().
+			Err(err).
+			Str("probe", p.name).
+			Str("target", p.targetName).
+			Str("url", p.url).
+			Str("method", p.method).
+			Int("status_code", statusCode).
+			Int("expected_code", p.expectedCode).
+			Msg("HTTP check failed")
+
 		if p.metrics != nil {
 			p.metrics.RecordPacketLoss(ctx, 1.0, p.targetName, "http", p.ipVersion, extraAttrs...)
 		}
@@ -180,11 +195,30 @@ func (p *HTTPProbe) executeCheck(ctx context.Context) {
 		attribute.String("status_code", strconv.Itoa(res.StatusCode)),
 	}
 
+	jitterVal := 0.0
+	var hasJitter bool
 	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
+		jitterVal = jitter
+		hasJitter = true
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "http", p.ipVersion, extraAttrs...)
 		}
 	}
+
+	logEvent := logger.Debug().
+		Str("probe", p.name).
+		Str("target", p.targetName).
+		Str("url", p.url).
+		Str("method", p.method).
+		Int("status_code", res.StatusCode).
+		Dur("total_rtt", res.TotalDuration).
+		Dur("ttfb", res.TTFB).
+		Dur("tls_handshake", res.TLSHandshake)
+
+	if hasJitter {
+		logEvent = logEvent.Float64("jitter_seconds", jitterVal)
+	}
+	logEvent.Msg("HTTP check success")
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "http", p.ipVersion, extraAttrs...)
@@ -203,19 +237,19 @@ func (c *RealHTTPClient) Do(ctx context.Context, method, targetURL string, expec
 	}
 
 	var (
-		dnsStart, dnsDone       time.Time
+		dnsStart, dnsDone         time.Time
 		connectStart, connectDone time.Time
 		tlsStart, tlsDone         time.Time
 		firstByteTime             time.Time
 	)
 
 	trace := &httptrace.ClientTrace{
-		DNSStart: func(_ httptrace.DNSStartInfo) { dnsStart = time.Now() },
-		DNSDone:  func(_ httptrace.DNSDoneInfo) { dnsDone = time.Now() },
-		ConnectStart: func(_, _ string) { connectStart = time.Now() },
-		ConnectDone:  func(_, _ string, _ error) { connectDone = time.Now() },
-		TLSHandshakeStart: func() { tlsStart = time.Now() },
-		TLSHandshakeDone:  func(_ tls.ConnectionState, _ error) { tlsDone = time.Now() },
+		DNSStart:             func(_ httptrace.DNSStartInfo) { dnsStart = time.Now() },
+		DNSDone:              func(_ httptrace.DNSDoneInfo) { dnsDone = time.Now() },
+		ConnectStart:         func(_, _ string) { connectStart = time.Now() },
+		ConnectDone:          func(_, _ string, _ error) { connectDone = time.Now() },
+		TLSHandshakeStart:    func() { tlsStart = time.Now() },
+		TLSHandshakeDone:     func(_ tls.ConnectionState, _ error) { tlsDone = time.Now() },
 		GotFirstResponseByte: func() { firstByteTime = time.Now() },
 	}
 

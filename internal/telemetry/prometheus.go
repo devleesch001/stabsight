@@ -27,7 +27,7 @@ type MetricsServer struct {
 // NewPrometheusExporter creates a Prometheus metric reader for the OTel MeterProvider
 // using a custom or default Prometheus Registerer.
 func NewPrometheusExporter(reg prometheus.Registerer) (sdkmetric.Reader, error) {
-	opts := []otelprom.Option{}
+	var opts []otelprom.Option
 	if reg != nil {
 		opts = append(opts, otelprom.WithRegisterer(reg))
 	}

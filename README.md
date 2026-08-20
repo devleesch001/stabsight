@@ -45,6 +45,7 @@ La configuration s'effectue via un fichier YAML unique (ex: `config.yaml`). Les 
 metrics_addr: ":9090"
 otlp_endpoint: "localhost:4317"
 log_level: "info"
+log_format: "json" # "json" (structuré) ou "common" (console lisible)
 
 targets:
   - name: "google-dns"

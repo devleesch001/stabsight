@@ -14,18 +14,23 @@ import (
 
 // Default operational values.
 const (
-	DefaultLogLevel     = "info"
-	DefaultMetricsAddr  = ":9090"
-	DefaultOTLPEndpoint = "localhost:4317"
-	EnvPrefix           = "INTERNET_MONITOR"
+	DefaultLogLevel      = "info"
+	DefaultLogFormat     = "json"
+	DefaultHistogramMode = "explicit"
+	DefaultMetricsAddr   = ":9090"
+	DefaultOTLPEndpoint  = "localhost:4317"
+	EnvPrefix            = "INTERNET_MONITOR"
 )
 
 // Config represents the complete application configuration.
 type Config struct {
 	// Operational settings (can be overridden by CLI flags and env vars)
-	LogLevel     string `mapstructure:"log_level" yaml:"log_level"`
-	MetricsAddr  string `mapstructure:"metrics_addr" yaml:"metrics_addr"`
-	OTLPEndpoint string `mapstructure:"otlp_endpoint" yaml:"otlp_endpoint"`
+	LogLevel         string    `mapstructure:"log_level" yaml:"log_level"`
+	LogFormat        string    `mapstructure:"log_format" yaml:"log_format"`
+	HistogramMode    string    `mapstructure:"histogram_mode" yaml:"histogram_mode"`       // "explicit" (default) or "exponential"
+	HistogramBuckets []float64 `mapstructure:"histogram_buckets" yaml:"histogram_buckets"` // Custom bucket boundaries in seconds
+	MetricsAddr      string    `mapstructure:"metrics_addr" yaml:"metrics_addr"`
+	OTLPEndpoint     string    `mapstructure:"otlp_endpoint" yaml:"otlp_endpoint"`
 
 	// Network monitoring targets (strictly configured via YAML only)
 	Targets []Target `mapstructure:"targets" yaml:"targets"`
@@ -98,10 +103,13 @@ type SpeedtestProbeConfig struct {
 // NewDefaultConfig returns a Config with default operational values.
 func NewDefaultConfig() *Config {
 	return &Config{
-		LogLevel:     DefaultLogLevel,
-		MetricsAddr:  DefaultMetricsAddr,
-		OTLPEndpoint: DefaultOTLPEndpoint,
-		Targets:      []Target{},
+		LogLevel:         DefaultLogLevel,
+		LogFormat:        DefaultLogFormat,
+		HistogramMode:    DefaultHistogramMode,
+		HistogramBuckets: nil,
+		MetricsAddr:      DefaultMetricsAddr,
+		OTLPEndpoint:     DefaultOTLPEndpoint,
+		Targets:          []Target{},
 	}
 }
 
@@ -113,6 +121,8 @@ func NewViper() *viper.Viper {
 	v.AutomaticEnv()
 
 	v.SetDefault("log_level", DefaultLogLevel)
+	v.SetDefault("log_format", DefaultLogFormat)
+	v.SetDefault("histogram_mode", DefaultHistogramMode)
 	v.SetDefault("metrics_addr", DefaultMetricsAddr)
 	v.SetDefault("otlp_endpoint", DefaultOTLPEndpoint)
 
@@ -126,9 +136,11 @@ func BindFlags(v *viper.Viper, flags *pflag.FlagSet) error {
 	}
 
 	flagBindings := map[string]string{
-		"log_level":     "log-level",
-		"metrics_addr":  "metrics-addr",
-		"otlp_endpoint": "otlp-endpoint",
+		"log_level":      "log-level",
+		"log_format":     "log-format",
+		"histogram_mode": "histogram-mode",
+		"metrics_addr":   "metrics-addr",
+		"otlp_endpoint":  "otlp-endpoint",
 	}
 
 	for viperKey, flagName := range flagBindings {
@@ -166,18 +178,22 @@ func Load(v *viper.Viper, configFile string, flags *pflag.FlagSet) (*Config, err
 			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
 
-		// Strictly decode targets from YAML file content (FR1/FR7 boundary)
+		// Strictly decode targets and custom histogram buckets from YAML file content
 		fileData, err := os.ReadFile(configFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read config file for targets: %w", err)
 		}
 
-		type yamlTargetsDoc struct {
-			Targets []Target `yaml:"targets"`
+		type yamlDoc struct {
+			HistogramBuckets []float64 `yaml:"histogram_buckets"`
+			Targets          []Target  `yaml:"targets"`
 		}
-		var doc yamlTargetsDoc
+		var doc yamlDoc
 		if err := yaml.Unmarshal(fileData, &doc); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal targets from YAML: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
+		}
+		if len(doc.HistogramBuckets) > 0 {
+			cfg.HistogramBuckets = doc.HistogramBuckets
 		}
 		if doc.Targets != nil {
 			cfg.Targets = doc.Targets
@@ -186,6 +202,8 @@ func Load(v *viper.Viper, configFile string, flags *pflag.FlagSet) (*Config, err
 
 	// Operational settings are resolved by Viper (flag > env > file > default)
 	cfg.LogLevel = v.GetString("log_level")
+	cfg.LogFormat = v.GetString("log_format")
+	cfg.HistogramMode = v.GetString("histogram_mode")
 	cfg.MetricsAddr = v.GetString("metrics_addr")
 	cfg.OTLPEndpoint = v.GetString("otlp_endpoint")
 
@@ -210,6 +228,32 @@ func (c *Config) Validate() error {
 	case "debug", "info", "warn", "error":
 	default:
 		return fmt.Errorf("invalid log_level %q: must be one of debug, info, warn, error", c.LogLevel)
+	}
+
+	// Validate log format
+	format := strings.ToLower(strings.TrimSpace(c.LogFormat))
+	switch format {
+	case "json", "common", "console", "":
+	default:
+		return fmt.Errorf("invalid log_format %q: must be one of json, common", c.LogFormat)
+	}
+
+	// Validate histogram mode
+	mode := strings.ToLower(strings.TrimSpace(c.HistogramMode))
+	switch mode {
+	case "explicit", "exponential", "":
+	default:
+		return fmt.Errorf("invalid histogram_mode %q: must be one of explicit, exponential", c.HistogramMode)
+	}
+
+	// Validate custom histogram buckets
+	for i, b := range c.HistogramBuckets {
+		if b <= 0 {
+			return fmt.Errorf("histogram_bucket at index %d must be > 0 (got %f)", i, b)
+		}
+		if i > 0 && b <= c.HistogramBuckets[i-1] {
+			return fmt.Errorf("histogram_buckets must be strictly monotonically increasing (got %f <= %f)", b, c.HistogramBuckets[i-1])
+		}
 	}
 
 	if strings.TrimSpace(c.MetricsAddr) == "" {

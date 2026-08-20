@@ -14,6 +14,7 @@ import (
 	"golang.org/x/net/ipv6"
 
 	"github.com/devleesch001/stabsight/internal/config"
+	"github.com/devleesch001/stabsight/internal/logging"
 	"github.com/devleesch001/stabsight/internal/scheduler"
 	"github.com/devleesch001/stabsight/internal/telemetry"
 )
@@ -141,8 +142,17 @@ func (p *ICMPProbe) executeCheck(ctx context.Context) {
 	pingCtx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 
+	logger := logging.Get()
 	rtt, err := p.pinger.Ping(pingCtx, p.host, p.ipVersion, p.timeout)
 	if err != nil {
+		logger.Debug().
+			Err(err).
+			Str("probe", p.name).
+			Str("target", p.targetName).
+			Str("host", p.host).
+			Str("ip_version", p.ipVersion).
+			Msg("ICMP ping failed (packet loss)")
+
 		if p.metrics != nil {
 			p.metrics.RecordPacketLoss(ctx, 1.0, p.targetName, "icmp", p.ipVersion)
 		}
@@ -150,13 +160,29 @@ func (p *ICMPProbe) executeCheck(ctx context.Context) {
 	}
 
 	rttSeconds := rtt.Seconds()
+	jitterVal := 0.0
+	var hasJitter bool
 
 	// FR5: Real-time Jitter calculation = |RTT_n - RTT_(n-1)| without smoothing
 	if jitter, ok := p.jitterCalc.Compute(rttSeconds); ok {
+		jitterVal = jitter
+		hasJitter = true
 		if p.metrics != nil {
 			p.metrics.RecordJitter(ctx, jitter, p.targetName, "icmp", p.ipVersion)
 		}
 	}
+
+	logEvent := logger.Debug().
+		Str("probe", p.name).
+		Str("target", p.targetName).
+		Str("host", p.host).
+		Str("ip_version", p.ipVersion).
+		Dur("rtt", rtt)
+
+	if hasJitter {
+		logEvent = logEvent.Float64("jitter_seconds", jitterVal)
+	}
+	logEvent.Msg("ICMP ping success")
 
 	if p.metrics != nil {
 		p.metrics.RecordRTT(ctx, rttSeconds, p.targetName, "icmp", p.ipVersion)

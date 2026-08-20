@@ -11,12 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/devleesch001/stabsight/internal/config"
+	"github.com/devleesch001/stabsight/internal/logging"
 	"github.com/devleesch001/stabsight/internal/scheduler"
 	"github.com/devleesch001/stabsight/internal/telemetry"
 )
@@ -171,8 +172,16 @@ func (p *MTRProbe) executeTrace(ctx context.Context) {
 	traceCtx, cancel := context.WithTimeout(ctx, time.Duration(p.maxHops)*p.timeout)
 	defer cancel()
 
+	logger := logging.Get()
 	result, err := p.tracer.Trace(traceCtx, p.host, p.maxHops, p.timeout)
 	if err != nil || result == nil {
+		logger.Debug().
+			Err(err).
+			Str("probe", p.name).
+			Str("target", p.targetName).
+			Str("host", p.host).
+			Int("max_hops", p.maxHops).
+			Msg("MTR traceroute failed")
 		return
 	}
 
@@ -182,6 +191,14 @@ func (p *MTRProbe) executeTrace(ctx context.Context) {
 	p.mu.Lock()
 	p.lastResult = result
 	p.mu.Unlock()
+
+	logger.Debug().
+		Str("probe", p.name).
+		Str("target", p.targetName).
+		Str("host", p.host).
+		Int("hops_count", len(result.Hops)).
+		Bool("reached_target", result.ReachedTarget).
+		Msg("MTR traceroute completed")
 
 	if p.metrics != nil {
 		for _, hop := range result.Hops {

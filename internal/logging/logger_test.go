@@ -3,6 +3,7 @@ package logging_test
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -39,9 +40,9 @@ func TestParseLevel(t *testing.T) {
 	}
 }
 
-func TestLoggerFiltering(t *testing.T) {
+func TestLoggerFiltering_JSON(t *testing.T) {
 	var buf bytes.Buffer
-	logger := logging.New("info", &buf)
+	logger := logging.New("info", "json", &buf)
 
 	logger.Debug().Msg("debug message should not appear")
 	if buf.Len() > 0 {
@@ -72,8 +73,26 @@ func TestLoggerFiltering(t *testing.T) {
 	}
 }
 
+func TestLoggerFormat_Common(t *testing.T) {
+	var buf bytes.Buffer
+	logger := logging.New("info", "common", &buf)
+
+	logger.Info().Str("target", "google-dns").Msg("ping success")
+	output := buf.String()
+
+	if !strings.Contains(output, "INF") && !strings.Contains(output, "info") {
+		t.Errorf("expected console level indicator in output, got: %s", output)
+	}
+	if !strings.Contains(output, "ping success") {
+		t.Errorf("expected message 'ping success' in output, got: %s", output)
+	}
+	if !strings.Contains(output, "target=google-dns") && !strings.Contains(output, "google-dns") {
+		t.Errorf("expected target field in output, got: %s", output)
+	}
+}
+
 func TestInit(t *testing.T) {
-	logger := logging.Init("warn")
+	logger := logging.Init("warn", "json")
 	if logger.GetLevel() != zerolog.WarnLevel {
 		t.Errorf("expected level WarnLevel, got %v", logger.GetLevel())
 	}

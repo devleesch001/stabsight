@@ -24,6 +24,11 @@ func TestRootCmdFlagsDefaults(t *testing.T) {
 		t.Errorf("expected default log-level flag to be 'info', got %v", logLevelFlag)
 	}
 
+	logFormatFlag := cmd.PersistentFlags().Lookup("log-format")
+	if logFormatFlag == nil || logFormatFlag.DefValue != "json" {
+		t.Errorf("expected default log-format flag to be 'json', got %v", logFormatFlag)
+	}
+
 	otlpFlag := cmd.PersistentFlags().Lookup("otlp-endpoint")
 	if otlpFlag == nil || otlpFlag.DefValue != "localhost:4317" {
 		t.Errorf("expected default otlp-endpoint flag to be 'localhost:4317', got %v", otlpFlag)

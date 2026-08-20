@@ -18,6 +18,7 @@ type BuildInfo struct {
 type GlobalFlags struct {
 	ConfigFile   string
 	LogLevel     string
+	LogFormat    string
 	OTLPEndpoint string
 	MetricsAddr  string
 }
@@ -39,6 +40,7 @@ to finely diagnose connectivity degradations by correlating multiple types of me
 	// Global persistent flags
 	rootCmd.PersistentFlags().StringVarP(&flags.ConfigFile, "config", "c", "config.yaml", "Path to YAML configuration file")
 	rootCmd.PersistentFlags().StringVarP(&flags.LogLevel, "log-level", "l", "info", "Log level (debug, info, warn, error)")
+	rootCmd.PersistentFlags().StringVar(&flags.LogFormat, "log-format", "json", "Log format (json, common)")
 	rootCmd.PersistentFlags().StringVar(&flags.OTLPEndpoint, "otlp-endpoint", "localhost:4317", "OpenTelemetry collector endpoint (gRPC/HTTP)")
 	rootCmd.PersistentFlags().StringVar(&flags.MetricsAddr, "metrics-addr", ":9090", "Address to expose Prometheus pull /metrics endpoint")
 

@@ -67,10 +67,10 @@ func NewOTLPExporter(ctx context.Context, cfg OTLPConfig) (sdkmetric.Reader, err
 			otlpmetrichttp.WithTimeout(timeout),
 		}
 		if cfg.Endpoint != "" {
-			if strings.HasPrefix(cfg.Endpoint, "http://") {
-				opts = append(opts, otlpmetrichttp.WithEndpoint(strings.TrimPrefix(cfg.Endpoint, "http://")), otlpmetrichttp.WithInsecure())
-			} else if strings.HasPrefix(cfg.Endpoint, "https://") {
-				opts = append(opts, otlpmetrichttp.WithEndpoint(strings.TrimPrefix(cfg.Endpoint, "https://")))
+			if after, ok := strings.CutPrefix(cfg.Endpoint, "http://"); ok {
+				opts = append(opts, otlpmetrichttp.WithEndpoint(after), otlpmetrichttp.WithInsecure())
+			} else if after0, ok0 := strings.CutPrefix(cfg.Endpoint, "https://"); ok0 {
+				opts = append(opts, otlpmetrichttp.WithEndpoint(after0))
 			} else {
 				opts = append(opts, otlpmetrichttp.WithEndpoint(cfg.Endpoint))
 				if cfg.Insecure {
