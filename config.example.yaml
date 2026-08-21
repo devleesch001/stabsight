@@ -49,6 +49,10 @@ targets:
         interval: 5s
         timeout: 2s
         port: 443
+      mtr:
+        interval: 60s
+        timeout: 1s
+        max_hops: 30
 
   - name: "route-diagnostics"
     host: "1.1.1.1"
@@ -56,7 +60,7 @@ targets:
     probes:
       mtr:
         interval: 60s
-        timeout: 5s
+        timeout: 1s
         max_hops: 30
 
   - name: "isp-bandwidth"

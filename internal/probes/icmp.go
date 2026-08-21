@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -240,7 +239,7 @@ func (rp *RealPinger) Ping(ctx context.Context, host string, ipVersion string, t
 	}
 	defer func() { _ = conn.Close() }()
 
-	id := os.Getpid() & 0xffff
+	id := rand.Intn(0xffff)  //nolint:gosec // random ID does not require cryptographic security
 	seq := rand.Intn(0xffff) //nolint:gosec // random ICMP sequence number does not require cryptographic security
 	msgBytes, err := (&icmp.Message{
 		Type: icmpType,
@@ -279,7 +278,7 @@ func (rp *RealPinger) Ping(ctx context.Context, host string, ipVersion string, t
 		default:
 		}
 
-		n, peer, err := conn.ReadFrom(replyBuf)
+		n, _, err := conn.ReadFrom(replyBuf)
 		if err != nil {
 			return 0, fmt.Errorf("failed to read ICMP reply: %w", err)
 		}
@@ -294,9 +293,7 @@ func (rp *RealPinger) Ping(ctx context.Context, host string, ipVersion string, t
 		switch parsedMsg.Type {
 		case ipv4.ICMPTypeEchoReply, ipv6.ICMPTypeEchoReply:
 			if echo, ok := parsedMsg.Body.(*icmp.Echo); ok {
-				// In unprivileged UDP mode, the kernel may set the ID, so match seq or id
-				if strings.HasPrefix(conn.LocalAddr().Network(), "udp") || echo.ID == id || echo.Seq == seq {
-					_ = peer
+				if echo.Seq == seq || echo.ID == id {
 					return rtt, nil
 				}
 			}

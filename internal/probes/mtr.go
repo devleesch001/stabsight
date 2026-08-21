@@ -2,10 +2,10 @@ package probes
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -348,7 +348,7 @@ func (t *RealMTRTracer) pingHop(
 	}
 	defer func() { _ = conn.Close() }()
 
-	id := os.Getpid() & 0xffff
+	id := rand.Intn(0xffff)  //nolint:gosec // random ID does not require cryptographic security
 	seq := rand.Intn(0xffff) //nolint:gosec // random sequence number does not require cryptographic security
 	msgBytes, err := (&icmp.Message{
 		Type: icmpType,
@@ -401,20 +401,69 @@ func (t *RealMTRTracer) pingHop(
 
 		switch parsedMsg.Type {
 		case ipv4.ICMPTypeTimeExceeded, ipv6.ICMPTypeTimeExceeded:
-			return &MTRHop{
-				Hop:     ttl,
-				IP:      peerIP,
-				RTT:     rtt,
-				Success: true,
-			}, false, nil
+			if matchTimeExceeded(parsedMsg.Body, id, seq, isIPv6) {
+				return &MTRHop{
+					Hop:     ttl,
+					IP:      peerIP,
+					RTT:     rtt,
+					Success: true,
+				}, false, nil
+			}
 
 		case ipv4.ICMPTypeEchoReply, ipv6.ICMPTypeEchoReply:
-			return &MTRHop{
-				Hop:     ttl,
-				IP:      peerIP,
-				RTT:     rtt,
-				Success: true,
-			}, true, nil
+			if echo, ok := parsedMsg.Body.(*icmp.Echo); ok {
+				isMatch := (echo.ID == id && echo.Seq == seq) ||
+					(strings.HasPrefix(conn.LocalAddr().Network(), "udp") && echo.Seq == seq)
+				if isMatch && peerIP == target.IP.String() {
+					return &MTRHop{
+						Hop:     ttl,
+						IP:      peerIP,
+						RTT:     rtt,
+						Success: true,
+					}, true, nil
+				}
+			}
 		}
 	}
+}
+
+// matchTimeExceeded checks whether an ICMP TimeExceeded message contains the original
+// ICMP echo request payload with matching ID and Seq.
+func matchTimeExceeded(body icmp.MessageBody, id, seq int, isIPv6 bool) bool {
+	te, ok := body.(*icmp.TimeExceeded)
+	if !ok || len(te.Data) == 0 {
+		return false
+	}
+
+	data := te.Data
+	if isIPv6 {
+		// IPv6 fixed header is 40 bytes. Original ICMPv6 header follows.
+		if len(data) < 48 {
+			return false
+		}
+		origType := data[40]
+		if origType != 128 { // 128 = ICMPv6 Echo Request
+			return false
+		}
+		origID := int(binary.BigEndian.Uint16(data[44:46]))
+		origSeq := int(binary.BigEndian.Uint16(data[46:48]))
+		return origSeq == seq && (origID == id || origID == 0)
+	}
+
+	// IPv4 header length is specified in the first byte (IHL * 4).
+	if len(data) < 28 {
+		return false
+	}
+	ihl := int(data[0]&0x0f) * 4
+	if len(data) < ihl+8 {
+		return false
+	}
+
+	origType := data[ihl]
+	if origType != 8 { // 8 = ICMPv4 Echo Request
+		return false
+	}
+	origID := int(binary.BigEndian.Uint16(data[ihl+4 : ihl+6]))
+	origSeq := int(binary.BigEndian.Uint16(data[ihl+6 : ihl+8]))
+	return origSeq == seq && (origID == id || origID == 0)
 }
